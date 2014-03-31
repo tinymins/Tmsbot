@@ -88,7 +88,15 @@ class wechatCallbackapiTest {
 					$contentStr = "我是小黄鸡~和我聊天吧~\ntip: 回复/help可以获取更多帮助~";
 					$tmsbot->saveLog($keyword, $fromUsername, $toUsername, $time, 'add', $contentStr, "utf8") ;
 				} else if( $keyword == '/help' ) {	# 获取帮助
-					$contentStr = "❀教我说话:\nteach 问题 回答\n❀我会算术~试试问我：\n\"log(5,25)*9^2等于几\"\n❀天气预报?试试问我：\n\"广德的天气？\"\n❀关心地震?试试问我：\n\"最近哪里地震了？\"\n❀...\n㊣更多功能正在开发~";
+					$contentStr = "❀教我说话:\nteach 问题 回答\n"
+					."❀查询手机号码?回我：\n\"13701191098\"\n"
+					."❀我会算术~试试问我：\n\"log(5,25)*9^2等于几\"\n"
+					."❀天气预报?试试问我：\n\"广德的天气？\"\n"
+					."❀关心地震?试试问我：\n\"最近哪里地震了？\"\n"
+					."❀关心快递?试试回我：\n\"申通468209487473\"\n"
+					."❀寻求翻译?试试回我：\n\"@法语 早上好\"\n"
+					."❀...\n"
+					."㊣更多功能正在开发~";
 					$tmsbot->saveLog($keyword, $fromUsername, $toUsername, $time, 'help', $contentStr, "utf8") ;
 				} else if( strpos($keyword, 'teach ') === 0 && count($teach = split( ' ', $keyword )) == 3 ) {	# 调教机器人
 					$contentStr = "我学会啦：\n".$teach[1].' -> '.$teach[2];
@@ -96,10 +104,45 @@ class wechatCallbackapiTest {
 					$tmsbot->saveLog($keyword, $fromUsername, $toUsername, $time, 'teach', $contentStr, "utf8") ;
 				} else {	# 普通聊天
 					// $contentStr = "洗洗睡吧~明天再玩~";
-					$contentStr = $tmsbot->talk( $keyword, "utf8", "utf8" );
+					if( $tmsbot->talk( $keyword, "utf8", "utf8" ) ) {
+						$contentStr = $tmsbot->getContentStr();
+						switch ( $tmsbot->getSessionType() ) {
+							case 'mobile':
+								$contentStr .= '我是号码鸡~\(≧▽≦)/~';
+								break;
+							case 'calc':
+								$contentStr .= '我是计算鸡~\(≧▽≦)/~';
+								break;
+							case 'weather':
+								$contentStr .= '我是气象鸡~\(≧▽≦)/~';
+								break;
+							case 'earthquake':
+								$contentStr .= '我是地震鸡(⊙o⊙)…';
+								break;
+							case 'express':
+								$contentStr .= '我是物流鸡~\(≧▽≦)/~';
+								break;
+							case 'translate':
+								$contentStr .= '我是翻译鸡~\(≧▽≦)/~';
+								break;
+							case 'talk':
+								break;
+						}
+					} else {
+						$contentStr = "洗洗睡吧~明天再玩~";
+					}
 					$tmsbot->saveLog($keyword, $fromUsername, $toUsername, $time, 'text', $contentStr, "utf8") ;
 				}
-				$resultStr = $this->createTextResultString ( $fromUsername, $toUsername, $time, $contentStr );	# 生成xml格式的回复字符串
+				switch ( $tmsbot->getContentType() ) {
+					case 'news':
+						$title = $tmsbot->getContentTitle(); $description = $tmsbot->getContentDescription();
+						$picURL = $tmsbot->getContentPicURL(); $url = $tmsbot->getContentURL();
+						$resultStr = $this->createNewsResultString ( $fromUsername, $toUsername, $time, $contentStr, $title, $description, $picURL, $url, '0' );	# 生成xml格式的回复字符串
+						break;
+					case 'text':
+					default:
+						$resultStr = $this->createTextResultString ( $fromUsername, $toUsername, $time, $contentStr );	# 生成xml格式的回复字符串
+				}
 			}
 			echo $resultStr;
 		} else {

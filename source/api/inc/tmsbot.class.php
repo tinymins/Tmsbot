@@ -1,4 +1,5 @@
 <?php
+// error_reporting(0);
 require_once('db.class.php');
 require_once("splitword.class.php");
 class TmsBot{
@@ -10,50 +11,66 @@ class TmsBot{
 			$this->db->query("SET CHARACTER SET '".TMS_DB_CHARSET."';");
 			$this->db->query("SET CHARACTER_SET_RESULTS='".TMS_DB_CHARSET."';");
 		}
+		$this->contentStr = '';
+		$this->contentType = '';
+		$this->newsURL = '';
+		$this->newsTitle = '';
+		$this->newsPicURL = '';
+		$this->newsDescription = '';
+		$this->sessionType = '';
+	}
+	var $contentStr, $contentType, $newsURL, $newsTitle, $newsPicURL, $newsDescription, $sessionType;
+	public function getSessionType() 	{ return $this->sessionType; }
+	public function getContentType() 	{ return $this->contentType; }
+	public function getContentStr() 	{ return $this->contentStr; }
+	public function getContentURL() 	{ return $this->newsURL; }
+	public function getContentTitle() 	{ return $this->newsTitle; }
+	public function getContentPicURL() 	{ return $this->newsPicURL; }
+	public function getContentDescription() { return $this->newsDescription; }
+	public function setTextContent( $cSessionType, $cString ) {	$this->contentType = 'text'; $this->sessionType = $cSessionType; $this->contentStr = $cString; }
+	public function setNewsContent( $cSessionType, $cString, $nURL, $nTitle, $nPicURL, $nDescription) {	$this->contentType = 'news'; $this->sessionType = $cSessionType; $this->contentStr = $cString; $this->newsURL = $nURL; $this->newsTitle = $nTitle; $this->newsPicURL = $nPicURL; $this->newsDescription = $nDescription; }
+	public function iconvAll( $encodingTo ) {
+		$encodingTo = str_replace('UTF8','UTF-8',strtoupper($encodingTo));
+		
+		if( $encodingTo != $encodingFrom ) { $this->sessionType = $this->iconv( $encodingTo, $this->getSessionType() ); }
+		
+		if( $encodingTo != $encodingFrom ) { $this->contentType = $this->iconv( $encodingTo, $this->getContentType() ); }
+		
+		if( $encodingTo != $encodingFrom ) { $this->contentStr = $this->iconv( $encodingTo, $this->getContentStr() ); }
+		
+		if( $encodingTo != $encodingFrom ) { $this->newsURL = $this->iconv( $encodingTo, $this->getContentURL() ); }
+		
+		if( $encodingTo != $encodingFrom ) { $this->newsTitle = $this->iconv( $encodingTo, $this->getContentTitle() ); }
+		
+		if( $encodingTo != $encodingFrom ) { $this->newsPicURL = $this->iconv( $encodingTo, $this->getContentPicURL() ); }
+		
+		if( $encodingTo != $encodingFrom ) { $this->newsDescription = $this->iconv( $encodingTo, $this->getContentDescription() ); }
+		
 	}
 	public function talk($msg,$requestEncoding='utf8',$responseEncoding='utf8',$i=0){ #对外接口：获取指定字符串的回复
 		if( $requestEncoding == 'gbk' ) $msg = iconv('GBK', 'UTF-8', $msg);
-		if( $this->query_mobile($msg, $rtnString) ) {	# 判断是不是手机号码。
+		if( $this->query_mobile($msg, $rtnString/*rtnArray*/) ) {	# 判断是不是手机号码。
 		
-		} else if( $this->calc($msg, $rtnString)!=-1 ) {	# 判断是不是计算题。
+		} else if( $this->query_calc($msg, $rtnString)!=-1 ) {	# 判断是不是计算题。
 			
-		} else if( $this->weather($msg, $rtnString) ) {	# 判断是不是天气查询。
+		} else if( $this->query_weather($msg, $rtnString) ) {	# 判断是不是天气查询。
 		
-		} else if( $this->earthquake($msg, $rtnString) ) {	# 判断是不是地震查询。
+		} else if( $this->query_earthquake($msg, $rtnString) ) {	# 判断是不是地震查询。
 			
 		} else if( $this->query_express($msg, $rtnString) ) {	# 判断是不是快递。
 			
-		} else {	# 按普通对话处理
-			$rtnString = $this->getFromDb($msg);
-			if( $rtnString == false ) {	# 如果数据库中没有
-				$rtnString = $this->sendMsg(urlencode($msg), $i);	# 尝试连接simsimi
-				if( $rtnString == false ) {	# 如果被simsimi封掉
-					$filtered_msg = preg_replace("/[^\x{4e00}-\x{9fa5}]+/u"," ",$msg);
-					$sp = new SplitWord();	# 尝试数据库分词搜索（采取最长两个分词匹配）
-					$splitedArr = split(' ',trim(iconv('GBK', 'UTF-8', $sp->SplitRMM(iconv('UTF-8', 'GBK', $filtered_msg)))));
-					$keyword1 = $splitedArr[0];$keyword2 = $splitedArr[count($splitedArr)-1];$keywordlen1 = strlen($keyword1);$keywordlen2 = strlen($keyword2);
-					for($i=1; $i<count($splitedArr)-2; $i++) {
-						if(strlen($splitedArr[$i])>$keywordlen1){
-							$keyword1 = $splitedArr[$i];
-						} else if(strlen($splitedArr[$i])>$keywordlen2) {
-							$keyword2 = $splitedArr[$i];
-						}
-					}
-					$rtnString = $this->getFromDb($keyword1,$keyword2);
-					# 失败的话，显示无能为力了。
-					if( $rtnString == false ) $rtnString = "唔。智商有限，不知道该怎么回答了。教教我吧~\n回复以下格式教我：\nteach 早安 早呀~\n这样当你再次对我说'早安'时我就会回答你'早呀~'";
-				} else {
-					$rtnString = urldecode($rtnString);
-					$this->teach($msg,$rtnString,'utf8');
-				}
-			}
+		} else if( $this->query_translate($msg, $rtnString) ) {	# 判断是不是翻译。
+			
+		} else if( $this->query_talk($msg) ) {	# 按普通对话处理
+			
+		} else {
+			return false;
 		}
-		if( $responseEncoding == 'gbk' ) $rtnString = iconv('UTF-8', 'GBK', $rtnString);
-		return $rtnString;
+		return true;
 	}
 	public function teach($msg,$content,$requestEncoding='utf8'){	#对外接口：用户自己调教机器人
-		// if( $requestEncoding == 'gbk' ) { $msg = iconv('GBK', 'UTF-8', $msg); $content = iconv('GBK', 'UTF-8', $content); }
-		if( $requestEncoding == 'utf8' ) { $msg = iconv('UTF-8', 'GBK', $msg); $content = iconv('UTF-8', 'GBK', $content); }
+		if( $requestEncoding == 'gbk' ) { $msg = iconv('GBK', 'UTF-8', $msg); $content = iconv('GBK', 'UTF-8', $content); }
+		// if( $requestEncoding == 'utf8' ) { $msg = iconv('UTF-8', 'GBK', $msg); $content = iconv('UTF-8', 'GBK', $content); }
 		$_checker = $this->db->get_one('SELECT * FROM '.TMS_DB_TABLE_PREFIX.'QaA WHERE msgStr = ? AND contentStr = ?',array($msg, $content));
 		if($_checker) {	# 数据库记录已存在
 			if( $_checker['deleted'] == 0 ) {	# 没人举报过，不操作。
@@ -68,12 +85,39 @@ class TmsBot{
 		}
 		return false;
 	}
-	public function earthquake($expr, &$rtnString, $fuzzy=true) {
+	public function query_talk( $msg ) {
+		$rtnString = $this->getFromDb($msg);
+		if( $rtnString == false ) {	# 如果数据库中没有
+			$rtnString = $this->sendMsg(urlencode($msg));	# 尝试连接simsimi
+			if( $rtnString == false ) {	# 如果被simsimi封掉
+				$filtered_msg = preg_replace("/[^\x{4e00}-\x{9fa5}]+/u"," ",$msg);
+				$sp = new SplitWord();	# 尝试数据库分词搜索（采取最长两个分词匹配）
+				$splitedArr = split(' ',trim(iconv('GBK', 'UTF-8', $sp->SplitRMM(iconv('UTF-8', 'GBK', $filtered_msg)))));
+				$keyword1 = $splitedArr[0];$keyword2 = $splitedArr[count($splitedArr)-1];$keywordlen1 = strlen($keyword1);$keywordlen2 = strlen($keyword2);
+				for($i=1; $i<count($splitedArr)-2; $i++) {
+					if(strlen($splitedArr[$i])>$keywordlen1){
+						$keyword1 = $splitedArr[$i];
+					} else if(strlen($splitedArr[$i])>$keywordlen2) {
+						$keyword2 = $splitedArr[$i];
+					}
+				}
+				$rtnString = $this->getFromDb($keyword1,$keyword2);
+				# 失败的话，显示无能为力了。
+				if( $rtnString == false ) $rtnString = "唔。智商有限，不知道该怎么回答了。教教我吧~\n回复以下格式教我：\nteach 早安 早呀~\n这样当你再次对我说'早安'时我就会回答你'早呀~'";
+			} else {
+				$rtnString = urldecode($rtnString);
+				$this->teach($msg,$rtnString,'utf8');
+			}
+		}
+		$this->contentStr = $rtnString;
+		return true;
+	}
+	public function query_earthquake($expr, &$rtnString, $fuzzy=true) {
 		if( $fuzzy ) {
 			preg_match_all("/(?:最近|哪|有).*地震/u", $expr, $matches);
 			if( count($matches[0])>0 ) {
-				if( $this->earthquake( $expr, $rtnString, false ) ) {
-					$rtnString = "最近地震情况：\n".$rtnString."我是地震鸡(⊙o⊙)…";
+				if( $this->query_earthquake( $expr, $rtnString, false ) ) {
+					$this->setTextContent( 'earthquake', $rtnString );
 					return true;
 				}
 				return false;
@@ -83,7 +127,7 @@ class TmsBot{
 		}
 		# 根据ID获取气象信息。
 		$rtnString = '未查询到相关数据';
-		$responseHTML = iconv('GBK','UTF-8',$this->get_var_curl("http://www.csndmc.ac.cn/newweb/recent_quickdata.jsp"));
+		$responseHTML = $this->iconv('UTF-8',$this->get_var_curl("http://www.csndmc.ac.cn/newweb/recent_quickdata.jsp"),TMS_DB_CHARSET.' utf-8');
 		
 		preg_match_all("/<tr>[^<]*<[^>]+>([\\-\\d\\s\\.\\:]+)<[^>]+>[^<]*<[^>]+>([\\d\\.]+)<\\/td>[^<]*<[^>]+>([\\d\\.]+)<\\/td>[^<]*<[^>]+>([\\d\\.]+)<\\/td>[^<]*<[^>]+>([\\d\\.]+)<\\/td>[^<]*<[^>]+>([^>]+)<\\/td>[^<]*<\\/tr>/uims", $responseHTML, $matches);
 		if( count($matches[0])>0 ) {
@@ -96,7 +140,7 @@ class TmsBot{
 			return false;
 		}
 	}
-	public function weather($expr, &$rtnString, $fuzzy=true) {
+	public function query_weather($expr, &$rtnString, $fuzzy=true) {
 		if( $fuzzy ) {
 			preg_match_all("/([\x{4e00}-\x{9fa5}]{2,7}?(?=.*[\\s|的]*天气))/u", $expr, $matches);
 			if( count($matches[1])>0 ) {
@@ -108,17 +152,17 @@ class TmsBot{
 						$city_name = str_replace('镇','',$city_name);	# 替换镇
 						$city_name = str_replace('乡','',$city_name);	# 替换乡
 					}
-					$_city = $this->db->get_all('SELECT * FROM '.TMS_DB_TABLE_PREFIX.'weather_code WHERE city_name LIKE ?',array(iconv('UTF-8','GBK',"%$city_name%")));
+					$_city = $this->db->get_all('SELECT * FROM '.TMS_DB_TABLE_PREFIX.'weather_code WHERE city_name LIKE ?',array($this->iconv(TMS_DB_CHARSET,"%{$city_name}%",'UTF-8')));
 					if($_city) {	# 数据库记录已存在
 						$rtnString = '';
 						foreach( $_city as $key=>$exp ) {
-							$city_id      = iconv('GBK','UTF-8',$_city[$key]['city_id']);	# 蛋疼的Access
-							$city_name    = iconv('GBK','UTF-8',$_city[$key]['city_name']);	# 蛋疼的Access
-							if( $this->weather( $city_id, $city_weather, false ) ) {
+							$city_id      = $this->iconv('UTF-8',$_city[$key]['city_id'],  TMS_DB_CHARSET);	# 蛋疼的Access
+							$city_name    = $this->iconv('UTF-8',$_city[$key]['city_name'],TMS_DB_CHARSET);	# 蛋疼的Access
+							if( $this->query_weather( $city_id, $city_weather, false ) ) {
 								$rtnString .= $city_name."天气情况：\n".$city_weather."\n";
 							}
 						}
-						$rtnString .= '我是气象鸡~\(≧▽≦)/~';
+						$this->setTextContent( 'weather', $rtnString );
 						return true;
 					} else {
 						return false;
@@ -140,7 +184,7 @@ class TmsBot{
 		}
 		return true;
 	}
-	public function calc($expr, &$ans, $fuzzy=true) {
+	public function query_calc($expr, &$ans, $fuzzy=true) {
 		$ans = '';
 		if( $fuzzy ) {
 			$expr = str_replace('π','pi()',$expr);	# 替换pi()
@@ -155,11 +199,11 @@ class TmsBot{
 			if( count($matches[1])>0 ) {
 				$tAnsState = 0;
 				foreach( $matches[1] as $key=>$exp ) {
-					$ansState = $this->calc( $exp, $tAns, false );
+					$ansState = $this->query_calc( $exp, $tAns, false );
 					$ans = $ans . $exp . ($ansState>0?'=':':') . $tAns ."\n" ;
 					$tAnsState = $tAnsState + $ansState & 0x1;
 				}
-				$ans = $ans . '我是计算鸡~\(≧▽≦)/~';
+				$this->setTextContent( 'calc',$ans );
 				return $tAnsState & 0x1;
 			} else {
 				$ans = '未匹配到表达式';
@@ -357,9 +401,11 @@ class TmsBot{
 			'zhengzhoujianhua' => '郑州建华',//（暂只能查好乐买的单，其他商家要查，请发邮件至 wensheng_chen#kingdee.com(将#替换成@)开通权限）
 			'zhongtianwanyun' => '中天万运',
 		);
-		preg_match_all("/([\x{4e00}-\x{9fa5}]+)[^\x{4e00}-\x{9fa5}]*?([\d\w]{7,})/u", $expr, $matches);
+		preg_match_all("/([\x{4e00}-\x{9fa5}]+)[^\x{4e00}-\x{9fa5}]*?([a-zA-Z0-9]{7,})/u", $expr, $matches);
 		if( count($matches[1])>0 ) {
 			for($i=0;$i<count($matches[1]);$i++) {
+				$is_matched = false;	# 是否匹配到查询物流的语句
+				$is_valid = false;		# 是否有查询成功的
 				foreach( $expresses as $key=>$exp ) {
 					if( strpos( $exp, $matches[1][$i] ) !== false ) {
 						$exprid = $matches[2][$i];
@@ -373,8 +419,10 @@ class TmsBot{
 							$Message = json_decode( $responseHTML, true );
 						}
 						if( is_array($Message) && array_key_exists('status',$Message) ) {
+							$is_matched = true;
 							$rtnString .= $exprid . "($exp): \n";
 							if( $Message['status'] == '200' ) {
+								$is_valid = true;
 								foreach( $Message['data'] as $dkey=>$dexp ) {
 									$rtnString .= $Message['data'][$dkey]['time'].":\n".$Message['data'][$dkey]['context']."\n";
 								}
@@ -386,8 +434,16 @@ class TmsBot{
 					}
 				}
 			}
-			$rtnString = $rtnString . '我是物流鸡~\(≧▽≦)/~';
-			return true;
+			if( $is_valid ) {
+				$this->setTextContent( 'express', $rtnString );
+			} else {
+				$nURL = TMS_BOT_BASE_URL . 'data/redirect/query_express.php';
+				$nTitle = '物流快递查询';
+				$nPicURL = '';
+				$nDescription = '单号不存在 点击进入人工查询';
+				$this->setNewsContent( 'express', $rtnString, $nURL, $nTitle, $nPicURL, $nDescription);
+			}
+			return $is_matched;
 		} else {
 			$rtnString = '未匹配到快递';
 			return false;
@@ -421,28 +477,148 @@ class TmsBot{
 					$rtnString .= "\n";
 				}
 			}
-			$rtnString = $rtnString . '我是号码鸡~\(≧▽≦)/~';
+			$this->setTextContent( 'mobile', $rtnString );
 			return true;
 		} else {
 			$rtnString = '未匹配到手机号码';
 			return false;
 		}
 	}
-	public function sendMsg($msg,$i=0){ // #发送给其他的SIMSIMI中转服务器请求数据
+	public function query_translate($expr, &$rtnString, $fuzzy=true) {
+		if ( strpos($expr,'@')!==0 ) return false;
+		$languages = array(
+			'sq' => '阿尔巴尼亚语', 
+			'ar' => '阿拉伯语', 
+			'az' => '阿塞拜疆语', 
+			'ga' => '爱尔兰语', 
+			'et' => '爱沙尼亚语', 
+			'be' => '白俄罗斯语', 
+			'bg' => '保加利亚语', 
+			'is' => '冰岛语', 
+			'pl' => '波兰语', 
+			'fa' => '波斯语', 
+			'af' => '布尔语(南非荷兰语)', 
+			'da' => '丹麦语', 
+			'de' => '德语', 
+			'ru' => '俄语', 
+			'fr' => '法语', 
+			'tl' => '菲律宾语', 
+			'fi' => '芬兰语', 
+			'ka' => '格鲁吉亚语', 
+			'gu' => '古吉拉特语', 
+			'ht' => '海地克里奥尔语', 
+			'ko' => '韩语', 
+			'nl' => '荷兰语', 
+			'gl' => '加利西亚语', 
+			'ca' => '加泰罗尼亚语', 
+			'cs' => '捷克语', 
+			'hr' => '克罗地亚语', 
+			'la' => '拉丁语', 
+			'lv' => '拉脱维亚语', 
+			'lt' => '立陶宛语', 
+			'ro' => '罗马尼亚语', 
+			'mt' => '马耳他语', 
+			'ms' => '马来语', 
+			'mk' => '马其顿语', 
+			'bn' => '孟加拉语', 
+			'no' => '挪威语', 
+			'pt' => '葡萄牙语', 
+			'ja' => '日语', 
+			'sv' => '瑞典语', 
+			'sr' => '塞尔维亚语', 
+			'eo' => '世界语', 
+			'sk' => '斯洛伐克语', 
+			'sl' => '斯洛文尼亚语', 
+			'sw' => '斯瓦希里语', 
+			'th' => '泰语', 
+			'tr' => '土耳其语', 
+			'cy' => '威尔士语', 
+			'uk' => '乌克兰语', 
+			'iw' => '希伯来语', 
+			'el' => '希腊语', 
+			'eu' => '西班牙的巴斯克语', 
+			'es' => '西班牙语', 
+			'hu' => '匈牙利语', 
+			'hy' => '亚美尼亚语', 
+			'it' => '意大利语', 
+			'yi' => '意第绪语', 
+			'hi' => '印地语', 
+			'kn' => '印度的卡纳达语', 
+			'te' => '印度的泰卢固语', 
+			'ta' => '印度的泰米尔语', 
+			'ur' => '印度乌尔都语', 
+			'id' => '印尼语', 
+			'en' => '英语', 
+			'vi' => '越南语', 
+			'zh-CN' => '汉语/中文(简体)', 
+			'zh-TW' => '汉语/中文(繁体)', 
+		);
+		preg_match_all("/^@([\x{4e00}-\x{9fa5}]+)\\s+(.*)/u", $expr, $matches);
+		if( count($matches[1])>0 ) {
+			for($i=0;$i<count($matches[1]);$i++) {
+				foreach( $languages as $tl=>$tlCN ) {
+					if( strpos($tlCN,$matches[1][$i])!==false ) {
+						#http://translate.google.cn/translate_a/t?client=t&text=".urlencode($expr)."&hl=zh-CN&sl=zh-CN&tl=en&ie=UTF-8&oe=UTF-8&multires=1&prev=conf&psl=en&ptl=en&otf=1&it=sel.17684&ssel=6&tsel=3&sc=1
+						$expr = $matches[2][$i];
+						$rtnString = $this->get_var_curl("http://translate.google.cn/translate_a/t?client=t&text=".urlencode($expr)."&sl=auto&tl=$tl&ie=UTF-8&oe=UTF-8",'NID=64=idr3PUI4SnehIiuk6q7S72l594VnnfIeSzaXJUCvrh381-qrXy624JKgFxmeqEVjZRJ6XW-QDKmaMNYsrRCLWU2qdI5956PNeMLaqTU2y24zRXbtwOgHW21B1c7DUZwe; PREF=ID=62979bbf4df9088a:U=d8a692627d055573:NW=1:TM=1355749651:LM=1355763670:S=8XxGt9PbZWJ3XCJv',$Ref='');
+						$rtnString = preg_replace('/,(?=,)/',',[]',$rtnString);
+						$Message = json_decode( $rtnString, true );
+						if( is_array($Message) && is_array($Message[0]) && is_array($Message[0][0]) ) {
+							@$rtnString = $Message[0][0][1]."\n".$Message[0][0][3]."\n".$Message[0][0][0]."\n".$Message[0][0][2]."\n";
+							$this->setTextContent( 'translate', $rtnString );
+						}
+						return true;
+					}
+				}
+			}
+		}
+		
+	}
+	public function sendMsg($msg) { // #发送给其他的SIMSIMI中转服务器请求数据
+		if( $ret = $this->send2simsimi($msg) ) return $ret;
+		if( $ret = $this->send2maizihuakai($msg) ) return $ret;
+		return false;
+	}
+	public function send2simsimi($msg,$i=0){
 		$responseHTML = $this->get_var_curl('http://www.simsimi.com/func/req?lc=ch&msg='.$msg,'JSESSIONID=F9BB999CD7919C27E724D53171A3D3F3','http://www.simsimi.com/talk.htm?lc=ch');
 		$Message = json_decode($responseHTML,true);
 		if(@$Message['result']=='100' && $Message['response'] <> 'hi'){
 			$rtnString = $Message['response'];
 			if( $i<5 ) {
-				if( strpos($rtnString, '微信') ) return $this->sendMsg($msg, $i+1);
+				if( strpos($rtnString, '微信') ) return $this->send2simsimi($msg, $i+1);
 				if( strpos($rtnString, 'developer.simsimi.com') ) {
+					return false;
+				}
+				if( strpos($rtnString, 'SimSimi is tired, I only can speak 200 time a day.')!==false ) {
 					return false;
 				}
 			} else {
 				$rtnString = false;
 			}
 		} else {
-			if( $i<5 ) return $this->sendMsg($msg, $i+1);
+			if( $i<5 ) return $this->send2simsimi($msg, $i+1);
+			$rtnString = false;//'服务器异常，请联系管理员（http://www.zhaiyiming.com）新浪微博：@翟小明tinymins';
+			// print_r($Message);
+		}
+		return $rtnString ;
+	}
+	public function send2maizihuakai($msg,$i=0){
+		$responseHTML = $this->get_var_curl('http://maizihuakai.com/xiaohuangji/get.php?Msg='.$msg,'','http://maizihuakai.com/xiaohuangji/');
+		if(preg_match_all("/<strong>小黄鸡[^<]*<\/strong><br\/>([^<]*)<\/div>/iu",$responseHTML,$arr)){
+			$rtnString = $arr[1][0];
+			if( $i<5 ) {
+				if( strpos($rtnString, '微信') ) return $this->send2maizihuakai($msg, $i+1);
+				if( strpos($rtnString, 'developer.simsimi.com') ) {
+					return false;
+				}
+				if( strpos($rtnString, 'SimSimi is tired, I only can speak 200 time a day.')!==false ) {
+					return false;
+				}
+			} else {
+				$rtnString = false;
+			}
+		} else {
+			if( $i<5 ) return $this->send2maizihuakai($msg, $i+1);
 			$rtnString = false;//'服务器异常，请联系管理员（http://www.zhaiyiming.com）新浪微博：@翟小明tinymins';
 			// print_r($Message);
 		}
@@ -492,25 +668,43 @@ class TmsBot{
 		$contentStr = $this->dbEncode($contentStr);
 		
 		date_default_timezone_set('PRC');
-		$file = fopen(__file__.'\\..\\record\\'.date("Y-m-d_H").'.txt','a');
+		if( !is_dir(__file__.'\\..\\record\\'.date("Y-m").'\\'.date("Y-m-d").'\\') ) {
+			if( !is_dir(__file__.'\\..\\record\\'.date("Y-m").'\\') ) {
+				if( !is_dir(__file__.'\\..\\record\\') ) {
+					mkdir(__file__.'\\..\\record\\');
+				}
+				mkdir(__file__.'\\..\\record\\'.date("Y-m").'\\');
+			}
+			mkdir(__file__.'\\..\\record\\'.date("Y-m").'\\'.date("Y-m-d").'\\');
+		}
+		$file = fopen(__file__.'\\..\\record\\'.date("Y-m").'\\'.date("Y-m-d").'\\'.date("Y-m-d_H").'.txt','a');
 		fwrite($file,"\n`$time`,`$msgType`,`$fromUsername`,`$toUsername`,`$msgStr`,`$contentStr`");
 		fclose($file);
 		return 0;
 	}
 	public function getFromDb($msgStr1,$msgStr2='') {	# 从数据库查询回复
 		if($msgStr2=='') $msgStr2=$msgStr1;
-		$msgStr1 = iconv("UTF-8","GBK",$msgStr1);
-		$msgStr2 = iconv("UTF-8","GBK",$msgStr2);
+		$msgStr1 = $this->iconv(TMS_DB_CHARSET,$msgStr1,"UTF-8");
+		$msgStr2 = $this->iconv(TMS_DB_CHARSET,$msgStr2,"UTF-8");
 		
 		$arrData = array( '%'.$msgStr1.'%', '%'.$msgStr2.'%' );		
 		$sql="SELECT * FROM ".TMS_DB_TABLE_PREFIX.'QaA WHERE msgStr LIKE ? AND msgStr LIKE ? AND deleted < 2';
 		$_dish = $this->db->get_all($sql,$arrData);
 		if( count($_dish)>0 ) {
-			$rtnString = iconv("GBK","UTF-8",$this->dbDecode($_dish[mt_rand(0,count($_dish)-1)]['contentStr']));
+			$rtnString = $this->iconv("UTF-8",$this->dbDecode($_dish[mt_rand(0,count($_dish)-1)]['contentStr']),TMS_DB_CHARSET);
 		} else
 			$rtnString = false;
 		return $rtnString;
 	}
+    public function dbExecute($sql,$para=array()){
+        return $this->db->execute($sql,$para);
+    }
+    public function dbGetAll($sql,$para=array()){
+        return $this->db->get_all($sql,$para);
+    }
+    public function dbGetOne($sql,$para=array()){
+        return $this->db->get_one($sql,$para);
+    }
 	private function dbEncode($str) {
 		$str = addcslashes($str, "\\");
 		$str = addcslashes($str, "`");
@@ -523,6 +717,22 @@ class TmsBot{
 	}
 	private function dbDecode($str) {
 		return stripcslashes($str);
+	}
+	function iconv( $toEncoding, $string, $from_encoding_list = '' ) { # 判断文本编码类型
+		$toEncoding = trim(str_replace('UTF8','UTF-8',strtoupper($toEncoding)));
+		$from_encoding_list = explode(' ', trim(str_replace('UTF8','UTF-8',strtoupper($from_encoding_list))));
+		$fromEncoding = (empty($from_encoding_list)) ? $this->detectEncoding( $string, $toEncoding ) : $this->detectEncoding( $string, $from_encoding_list );
+		if( $fromEncoding && $fromEncoding!=$toEncoding ) $string = iconv( $fromEncoding, $toEncoding, $string );
+		return $string;
+	}
+	function detectEncoding( $string, $encoding_list = array('GBK', 'GB2312', 'ASCII', 'UTF-8') ) { # 判断文本编码类型(是否为$is_encode)
+		// if($this->is_utf8($string)) return 'UTF-8';
+		// if(preg_match("/[".chr(0xa1)."-".chr(0xff)."]/",$string)) return 'GBK';
+		// if(preg_match("/[x{4e00}-x{9fa5}]/u",$string)) return 'UTF-8';
+		foreach($encoding_list as $c){
+			if( $string === @iconv(($c=='UTF-8')?'GB2312':'UTF-8', $c, iconv($c, ($c=='UTF-8')?'GB2312':'UTF-8', $string))){ return $c; }
+		}
+		return null;
 	}
 }
 ?>
