@@ -16,9 +16,9 @@ define("TMS_BOT_BASE_URL","http://zhaiyiming.com/software/robot/");
 define("TMS_DB_TABLE_PREFIX","tmsbot_");
 /*Local Debug*/
 define("TMS_DB_HOST","localhost");
-define("TMS_DB_NAME","tmsbot");
-define("TMS_DB_USER","tmsbot");
-define("TMS_DB_PW","tmsbot");
+define("TMS_DB_NAME","DB_NAME");
+define("TMS_DB_USER","DB_USER");
+define("TMS_DB_PW","DB_PW");
 define("TMS_DB_CHARSET","UTF8");
 /*Local Debug*/
 /*End*/
