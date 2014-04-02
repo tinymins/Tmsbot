@@ -14,30 +14,31 @@
         $tmsbot->RegisterQueryCall('QueryCall::filter_earthquake','QueryCall::query_earthquake',254);
         $tmsbot->RegisterQueryCall('QueryCall::filter_weather','QueryCall::query_weather',254);
         $tmsbot->RegisterQueryCall('QueryCall::filter_express','QueryCall::query_express',254);
-		$tmsbot->talk($msg,"utf8","utf8");
-		$rtnString = $tmsbot->getContentStr();
-		switch ( $tmsbot->getSessionType() ) {
-			case 'mobile':
-				$rtnString = $rtnString . '我是号码鸡~\(≧▽≦)/~';
-				break;
-			case 'calc':
-				$rtnString = $rtnString . '我是计算鸡~\(≧▽≦)/~';
-				break;
-			case 'weather':
-				$rtnString = $rtnString . '我是气象鸡~\(≧▽≦)/~';
-				break;
-			case 'earthquake':
-				$rtnString = $rtnString . '我是地震鸡(⊙o⊙)…';
-				break;
-			case 'express':
-				$rtnString = $rtnString . '我是物流鸡~\(≧▽≦)/~';
-				break;
-			case 'translate':
-				$rtnString = $rtnString . '我是翻译鸡~\(≧▽≦)/~';
-				break;
-			case 'talk':
-				break;
-		}
+		if( $tmsbot->talk($msg,"utf8","utf8") ) {
+            $rtnString = $tmsbot->getContentStr();
+            switch ( $tmsbot->getSessionType() ) {
+                case 'mobile':
+                    $rtnString = $rtnString . '我是号码鸡~\(≧▽≦)/~';
+                    break;
+                case 'calc':
+                    $rtnString = $rtnString . '我是计算鸡~\(≧▽≦)/~';
+                    break;
+                case 'weather':
+                    $rtnString = $rtnString . '我是气象鸡~\(≧▽≦)/~';
+                    break;
+                case 'earthquake':
+                    $rtnString = $rtnString . '我是地震鸡(⊙o⊙)…';
+                    break;
+                case 'express':
+                    $rtnString = $rtnString . '我是物流鸡~\(≧▽≦)/~';
+                    break;
+                case 'translate':
+                    $rtnString = $rtnString . '我是翻译鸡~\(≧▽≦)/~';
+                    break;
+                case 'talk':
+                    break;
+            }
+        } else { $rtnString = "[DEBUG]匹配失败。"; }
 		echo "Output: \n" . $rtnString;
 		exit;
 		if($_GET['skey'] != '658782'){

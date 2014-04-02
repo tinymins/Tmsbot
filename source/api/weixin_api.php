@@ -121,7 +121,8 @@ class wechatCallbackapiTest {
 								break;
 						}
 					} else {
-						$contentStr = "洗洗睡吧~明天再玩~";
+						// $contentStr = "洗洗睡吧~明天再玩~";
+						$contentStr = "唔。智商有限，不知道该怎么回答了。教教我吧~\n回复以下格式教我：\nteach 早安 早呀~\n这样当你再次对我说'早安'时我就会回答你'早呀~'";
 					}
 					$tmsbot->saveLog($keyword, $fromUsername, $toUsername, $time, 'text', $contentStr, "utf8") ;
 				}

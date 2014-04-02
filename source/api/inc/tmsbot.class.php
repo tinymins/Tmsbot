@@ -113,7 +113,7 @@ class TmsBot{
 				}
 				$rtnString = $me->getFromDb($keyword1,$keyword2);
 				# 失败的话，显示无能为力了。
-				if( $rtnString == false ) $rtnString = "唔。智商有限，不知道该怎么回答了。教教我吧~\n回复以下格式教我：\nteach 早安 早呀~\n这样当你再次对我说'早安'时我就会回答你'早呀~'";
+				if( $rtnString == false ) return null;
 			} else {
 				$rtnString = urldecode($rtnString);
 				$me->teach($msg,$rtnString,'utf8');
