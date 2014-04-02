@@ -1,7 +1,7 @@
 <?php
 // error_reporting(0);
 require_once('db.class.php');
-require_once("splitword.class.php");
+require_once("splitword/splitword.class.php");
 class TmsBot{
 	var $db;														//用户数据库
 	function __construct($dbUsage = true) {										//构造函数，连接数据库
@@ -69,6 +69,7 @@ class TmsBot{
                     $result['data']['pic_url'], 
                     $result['data']['description']
                 );
+                if( $responseEncoding == 'gbk' ) $this->iconvAll('GBK');
                 return true;
             }
         }
@@ -91,10 +92,10 @@ class TmsBot{
 		}
 		return false;
 	}
-    public function filter_talk( $str, $me ) {
+    public static function filter_talk( $str, $me ) {
         return $str;
     }
-	public function query_talk( $msg, $me ) {
+	public static function query_talk( $msg, $me ) {
 		$rtnString = $me->getFromDb($msg);
 		if( $rtnString == false ) {	# 如果数据库中没有
 			$rtnString = $me->sendMsg(urlencode($msg));	# 尝试连接simsimi
@@ -211,28 +212,30 @@ class TmsBot{
 		return $responseHTML ;
 	}
 	public function saveLog($msgStr, $fromUsername, $toUsername, $time, $msgType, $contentStr, $encoding="utf8") {	#把各种用户操作记录写入存盘
-		error_reporting(0);
-		$msgStr 	= $this->dbEncode($msgStr);
-		$fromUsername = $this->dbEncode($fromUsername);
-		$toUsername = $this->dbEncode($toUsername);
-		$time 		= $this->dbEncode($time);
-		$msgType 	= $this->dbEncode($msgType);
-		$contentStr = $this->dbEncode($contentStr);
+        $this->db->insert(TMS_DB_TABLE_PREFIX.'record', array('rc_type'=> $msgType, 'rc_sender'=> $fromUsername, 'rc_receiver'=> $toUsername, 'rc_request'=> $msgStr, 'rc_response'=> $contentStr));
+        return 0;
+		// error_reporting(0);
+		// $msgStr 	= $this->dbEncode($msgStr);
+		// $fromUsername = $this->dbEncode($fromUsername);
+		// $toUsername = $this->dbEncode($toUsername);
+		// $time 		= $this->dbEncode($time);
+		// $msgType 	= $this->dbEncode($msgType);
+		// $contentStr = $this->dbEncode($contentStr);
 		
-		date_default_timezone_set('PRC');
-		if( !is_dir(__file__.'\\..\\record\\'.date("Y-m").'\\'.date("Y-m-d").'\\') ) {
-			if( !is_dir(__file__.'\\..\\record\\'.date("Y-m").'\\') ) {
-				if( !is_dir(__file__.'\\..\\record\\') ) {
-					mkdir(__file__.'\\..\\record\\');
-				}
-				mkdir(__file__.'\\..\\record\\'.date("Y-m").'\\');
-			}
-			mkdir(__file__.'\\..\\record\\'.date("Y-m").'\\'.date("Y-m-d").'\\');
-		}
-		$file = fopen(__file__.'\\..\\record\\'.date("Y-m").'\\'.date("Y-m-d").'\\'.date("Y-m-d_H").'.txt','a');
-		fwrite($file,"\n`$time`,`$msgType`,`$fromUsername`,`$toUsername`,`$msgStr`,`$contentStr`");
-		fclose($file);
-		return 0;
+		// date_default_timezone_set('PRC');
+		// if( !is_dir(__file__.'\\..\\record\\'.date("Y-m").'\\'.date("Y-m-d").'\\') ) {
+			// if( !is_dir(__file__.'\\..\\record\\'.date("Y-m").'\\') ) {
+				// if( !is_dir(__file__.'\\..\\record\\') ) {
+					// mkdir(__file__.'\\..\\record\\');
+				// }
+				// mkdir(__file__.'\\..\\record\\'.date("Y-m").'\\');
+			// }
+			// mkdir(__file__.'\\..\\record\\'.date("Y-m").'\\'.date("Y-m-d").'\\');
+		// }
+		// $file = fopen(__file__.'\\..\\record\\'.date("Y-m").'\\'.date("Y-m-d").'\\'.date("Y-m-d_H").'.txt','a');
+		// fwrite($file,"\n`$time`,`$msgType`,`$fromUsername`,`$toUsername`,`$msgStr`,`$contentStr`");
+		// fclose($file);
+		// return 0;
 	}
 	public function getFromDb($msgStr1,$msgStr2='') {	# 从数据库查询回复
 		if($msgStr2=='') $msgStr2=$msgStr1;

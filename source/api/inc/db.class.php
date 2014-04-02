@@ -1,5 +1,5 @@
 <?php
-include_once("tmsConfig.php");
+include_once("tmsbot.config.php");
 //数据库封装类 萨瓦迪卡~
 class DB extends PDO{	//此类扩展自PHP的PDO数据库操作类
 	var $sth;	//用于储存PDOStatement对象

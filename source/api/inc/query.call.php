@@ -1,14 +1,14 @@
 <?php
 class QueryCall {
-    public function TestFilter($str,$me){ return $str; }
-    public function TestCalc($str,$me){ return array(
+    public static function TestFilter($str,$me){ return $str; }
+    public static function TestCalc($str,$me){ return array(
         'type'=>'text',
         'data'=>array(
             'type'=>'test',
             'content'=>'这是返回值'
         )
     ); }
-    public function filter_calc($expr,$me) {
+    public static function filter_calc($expr,$me) {
         $expr = str_replace('π','pi()',$expr);	# 替换pi()
         $expr = str_replace('加','+',$expr);	# 替换加
         $expr = str_replace('减','-',$expr);	# 替换减
@@ -21,7 +21,7 @@ class QueryCall {
         if( count($matches[1])>0 ) return $matches[1];
         else return null;
     }
-    public function query_calc($matches,$me) {
+    public static function query_calc($matches,$me) {
         require_once('math/eval_expr_to_rpn.php');
 		require_once('math/eval_rpn.php');
 		require_once('math/eval_my_function.php');
@@ -52,11 +52,11 @@ class QueryCall {
             )
         );
     }
-    public function filter_earthquake($expr,$me) {
+    public static function filter_earthquake($expr,$me) {
         preg_match_all("/(?:最近|哪|有).*地震/u", $expr, $matches);
         if( count($matches[0])>0 ) return true;
     }
-    public function query_earthquake($expr,$me) {
+    public static function query_earthquake($expr,$me) {
         # 获取地震信息。
         $rtnString = '未查询到相关数据';
         // $responseHTML = $me->iconv('UTF-8',$me->get_var_curl("http://www.csndmc.ac.cn/newweb/recent_quickdata.jsp"),TMS_DB_CHARSET.' utf-8');
@@ -79,11 +79,11 @@ class QueryCall {
             return null;
         }
     }
-    public function filter_express($expr,$me) {
+    public static function filter_express($expr,$me) {
 		preg_match_all("/([\x{4e00}-\x{9fa5}]+)[^\x{4e00}-\x{9fa5}]*?([a-zA-Z0-9]{7,})/u", $expr, $matches);
 		if( count($matches[1])>0 ) { return $matches; }
     }
-    public function query_express($matches,$me) {
+    public static function query_express($matches,$me) {
 		$expresses = array (
 			'auspost' => '澳大利亚邮政(英文结果）',
 			'aae' => 'AAE',
@@ -258,7 +258,7 @@ class QueryCall {
             foreach( $expresses as $key=>$exp ) {
                 if( strpos( $exp, $matches[1][$i] ) !== false ) {
                     $exprid = $matches[2][$i];
-                    // $responseHTML = $this->get_var_curl("http://baidu.kuaidi100.com/query?type=$key&postid=$exprid&id=4&valicode=&temp=0.7806499029975384&tmp=0.04940579901449382",$cookie='inputpostid=EY166724682CS; comcode=ems',$Ref='');
+                    // $responseHTML = $me->get_var_curl("http://baidu.kuaidi100.com/query?type=$key&postid=$exprid&id=4&valicode=&temp=0.7806499029975384&tmp=0.04940579901449382",$cookie='inputpostid=EY166724682CS; comcode=ems',$Ref='');
                     $responseHTML = $me->get_var_curl("http://www.kuaidi100.com/query?type={$key}&postid={$exprid}&id=11&valicode=&temp=0.5595061660278589&sessionid=&tmp=0.6303061710204929",$cookie='bdshare_firstime=1360754065620; indexCompanyCode=$key',$Ref='http://www.kuaidi100.com/frame/index.htm');
                     
                     $Message = json_decode( $responseHTML, true );
@@ -307,11 +307,11 @@ class QueryCall {
         #'未匹配到快递';
         return null;
     }
-    public function filter_mobile($expr,$me) {
+    public static function filter_mobile($expr,$me) {
         preg_match_all("/(?:\D|^)(1\d{10})(?:(?!\d)|$)/u", $expr, $matches);
         if( count($matches[1])>0 ) return $matches; else return null;
     }
-    public function query_mobile($matches,$me) {
+    public static function query_mobile($matches,$me) {
         if( count($matches[1])>0 ) {
             $rtnString = '';
             for($i=0;$i<count($matches[1]);$i++) {
@@ -349,12 +349,12 @@ class QueryCall {
         #'未匹配到手机号码';
         return null;
     }
-    public function filter_translate($expr,$me) {
+    public static function filter_translate($expr,$me) {
         if ( strpos($expr,'@')!==0 ) return null;
         preg_match_all("/^@([\x{4e00}-\x{9fa5}]+)\\s+(.*)/u", $expr, $matches);
         if( count($matches[1])>0 ) { return $matches; }
     }
-	public function query_translate($matches,$me) {
+	public static function query_translate($matches,$me) {
 		$languages = array(
 			'sq' => '阿尔巴尼亚语', 
 			'ar' => '阿拉伯语', 
@@ -445,7 +445,7 @@ class QueryCall {
         }
         return null;
     }
-    public function filter_weather($expr,$me) {
+    public static function filter_weather($expr,$me) {
         preg_match_all("/([\x{4e00}-\x{9fa5}]{2,7}?(?=.*[\\s|的]*天气))/u", $expr, $matches);
         if( count($matches[1])>0 ) { 
             $expr = array();
@@ -473,7 +473,7 @@ class QueryCall {
         }
         return null;
     }
-    public function query_weather($matches,$me) {
+    public static function query_weather($matches,$me) {
 		# 根据ID获取气象信息。
 		$rtnString = '';
         foreach( $matches as $match ) {

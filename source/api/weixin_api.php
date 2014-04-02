@@ -2,8 +2,6 @@
 /**
   * wechat php test
   */
-require_once("inc/tmsbot.class.php");
-// $tmsbot = new TmsSimSimi(); echo $tmsbot->talk("你是谁呀","utf8","utf8"); exit;
 
 //define your token
 define("TOKEN", iconv("UTF-8","GBK","zrx805502507"));
@@ -23,6 +21,16 @@ class wechatCallbackapiTest {
 	}
 
 	public function responseMsg() {
+        require_once("inc/tmsbot.class.php");
+        require_once("inc/query.call.php");
+        $tmsbot = new TmsBot();
+        $tmsbot->RegisterQueryCall('QueryCall::filter_mobile','QueryCall::query_mobile',251);
+        $tmsbot->RegisterQueryCall('QueryCall::filter_calc','QueryCall::query_calc',252);
+        $tmsbot->RegisterQueryCall('QueryCall::filter_translate','QueryCall::query_translate',253);
+        $tmsbot->RegisterQueryCall('QueryCall::filter_earthquake','QueryCall::query_earthquake',254);
+        $tmsbot->RegisterQueryCall('QueryCall::filter_weather','QueryCall::query_weather',254);
+        $tmsbot->RegisterQueryCall('QueryCall::filter_express','QueryCall::query_express',254);
+
 		//get post data, May be due to the different environments
 		@$postStr = $GLOBALS["HTTP_RAW_POST_DATA"];
 
@@ -41,14 +49,14 @@ class wechatCallbackapiTest {
 				$mediaId = $postObj->MediaId;
 				$contentStr = '不要说话～听不懂听不懂听不懂～';
 				$resultStr = $this->createTextResultString ( $fromUsername, $toUsername, $time, $contentStr, '1' );
-				$tmsbot = new TmsBot(false); $keyword = $mediaId;
+				$keyword = $mediaId;
 				$tmsbot->saveLog($keyword, $fromUsername, $toUsername, $time, $msgType, $contentStr, "utf8") ;
 			break;
 			case 'image':
 				$picUrl = $postObj->PicUrl;
 				$title = '不要发图啦~'; $description=$picUrl; $url=$picUrl;
 				$resultStr = $this->createNewsResultString( $fromUsername, $toUsername, $time, $contentStr, $title, $description, $picURL, $url, '1' );
-				$tmsbot = new TmsBot(false); $keyword = $picUrl; $contentStr = $title;
+				$keyword = $picUrl; $contentStr = $title;
 				$tmsbot->saveLog($keyword, $fromUsername, $toUsername, $time, $msgType, $contentStr, "utf8") ;
 			break;
 			case 'location':
@@ -58,28 +66,12 @@ class wechatCallbackapiTest {
 				$label = $postObj->Label;
 				$contentStr = "经度：$locationX\n纬度：$locationY\n$label\n所以呢？";
 				$resultStr = $this->createTextResultString ( $fromUsername, $toUsername, $time, $contentStr, '1' );
-				$tmsbot = new TmsBot(false); $keyword = "[$locationX,$locationY,$scale,$label]";
+				$keyword = "[$locationX,$locationY,$scale,$label]";
 				$tmsbot->saveLog($keyword, $fromUsername, $toUsername, $time, $msgType, $contentStr, "utf8") ;
 			break;
 			case 'text':	# 回复类型为text的模板
 			default:
-				$tmsbot = new TmsBot();
 				$keyword = trim(preg_replace('/\s\s+/', ' ', $postObj->Content ));
-				if($fromUsername=='oDMR9jlit1v24L0cuoHcPYtWLa0I!'&&$keyword!="活着没？") { # Debug
-					$contentStr = $tmsbot->talk( $keyword, "utf8", "utf8" );
-					// $contentStr = "$fromUsername|$toUsername|$keyword|$createTime|$msgType|$msgId|$time";
-					// $contentStr = $postStr ;
-					// $title = '标题';$description='描述';$picURL='http://www.zhaiyiming.com/css/images/img1.png';$url='http://www.zhaiyiming.com';
-					// $resultStr = $this->createNewsResultString( $fromUsername, $toUsername, $time, $contentStr, $title, $description, $picURL, $url, '0' );
-					$resultStr = $this->createTextResultString ( $fromUsername, $toUsername, $time, $contentStr );
-					
-					$file = fopen(__file__.'\\..\\inc\\record\\debug.txt','a');
-					fwrite($file,"\n`$time`,`text`,`$fromUsername`,`$toUsername`,`$keyword`,`".$contentStr."`");
-					fclose($file);
-					
-					echo $resultStr;
-					exit;
-				}
 				if(empty( $keyword )) {
 					$contentStr = "说点什么吧\ntip: 回复/help可以获取更多帮助~";
 					$resultStr = $this->createTextResultString ( $fromUsername, $toUsername, $time, $contentStr );
@@ -98,7 +90,7 @@ class wechatCallbackapiTest {
 					."❀...\n"
 					."㊣更多功能正在开发~";
 					$tmsbot->saveLog($keyword, $fromUsername, $toUsername, $time, 'help', $contentStr, "utf8") ;
-				} else if( strpos($keyword, 'teach ') === 0 && count($teach = split( ' ', $keyword )) == 3 ) {	# 调教机器人
+				} else if( strpos($keyword, 'teach ') === 0 && count($teach = split( ' ', preg_replace('/\s+/',' ',$keyword) )) == 3 ) {	# 调教机器人
 					$contentStr = "我学会啦：\n".$teach[1].' -> '.$teach[2];
 					$tmsbot->teach($teach[1],$teach[2],'utf8');
 					$tmsbot->saveLog($keyword, $fromUsername, $toUsername, $time, 'teach', $contentStr, "utf8") ;
@@ -125,7 +117,7 @@ class wechatCallbackapiTest {
 							case 'translate':
 								$contentStr .= '我是翻译鸡~\(≧▽≦)/~';
 								break;
-							case 'talk':
+							case 'normal':
 								break;
 						}
 					} else {
@@ -150,8 +142,8 @@ class wechatCallbackapiTest {
 			exit;
 		}
 	}
+	# 回复类型为text的模板
 	private function createTextResultString ( $fromUsername, $toUsername, $time, $contentStr, $funcFlag='0' ){
-		# 回复类型为text的模板
 		$textTpl = "<xml>
 					<ToUserName><![CDATA[%s]]></ToUserName>
 					<FromUserName><![CDATA[%s]]></FromUserName>
@@ -164,8 +156,8 @@ class wechatCallbackapiTest {
 		$msgType = "text";
 		return sprintf($textTpl, $fromUsername, $toUsername, $time, $msgType, $contentStr, $funcFlag);
 	}
+	# 回复类型为news的模板
 	private function createNewsResultString( $fromUsername, $toUsername, $time, $contentStr, $title, $description, $picURL, $url, $funcFlag='0' ){
-		# 回复类型为news的模板
 		$newsTpl = "<xml>
 					<ToUserName><![CDATA[%s]]></ToUserName>
 					<FromUserName><![CDATA[%s]]></FromUserName>
